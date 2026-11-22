@@ -1,0 +1,29 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find project (unzip project.zip if present)
+        run: |
+          if [ -f project.zip ]; then unzip -oq project.zip -d _src; fi
+          S=$(find . -name settings.gradle.kts -not -path './.git/*' | head -n1)
+          echo "Found: $S"
+          echo "PROJ=$(dirname "$S")" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build release APK
+        working-directory: ${{ env.PROJ }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GlassBrowser-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/release/*.apk
